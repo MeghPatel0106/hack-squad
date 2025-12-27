@@ -454,30 +454,39 @@ def api_requests():
         if data.get('stage') == 'Scrap':
              cursor.execute("UPDATE Equipment SET is_scrapped = TRUE WHERE id = %s", (data['equipment_id'],))
         
-        # Auto-assign team/tech for Company Users (and everyone really, to enforce rules)
-        # "User must NOT select Maintenance Team manually"
-        cursor.execute("SELECT maintenance_team_id, default_technician_id FROM Equipment WHERE id = %s", (data['equipment_id'],))
-        eq_data = cursor.fetchone()
-        
-        team_id = eq_data['maintenance_team_id'] if eq_data else None
-        tech_id = eq_data['default_technician_id'] if eq_data else None
-
+        # Validate Equipment Exists
         if not data.get('equipment_id'):
              return jsonify({'error': 'Equipment is required'}), 400
+
+        cursor.execute("SELECT maintenance_team_id, default_technician_id, is_scrapped FROM Equipment WHERE id = %s", (data['equipment_id'],))
+        eq_data = cursor.fetchone()
+
+        if not eq_data:
+            return jsonify({'error': 'Selected equipment not found in database'}), 404
+
+        if eq_data.get('is_scrapped'):
+            return jsonify({'error': 'Cannot create request for scrapped equipment'}), 400
+        
+        team_id = eq_data['maintenance_team_id']
+        tech_id = eq_data['default_technician_id']
 
         if not data.get('scheduled_date'):
             return jsonify({'error': 'Scheduled Date is required. Please create requests via the Calendar.'}), 400
 
-        cursor.execute("""
-            INSERT INTO MaintenanceRequest (subject, description, equipment_id, team_id, technician_id, created_by_user_id, request_type, stage, scheduled_date, duration_hours)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (data['subject'], data.get('description', ''), data['equipment_id'], team_id, tech_id, g.user['id'],
-              data['request_type'], data.get('stage', 'New'), data.get('scheduled_date'), data.get('duration_hours')))
-        new_id = cursor.lastrowid
-        cursor.close()
-        
-        log_action(g.user['id'], 'CREATE_REQUEST', 'MaintenanceRequest', new_id, f"Created request: {data['subject']}")
-        return jsonify({'id': new_id, 'message': 'Request created'}), 201
+        try:
+            cursor.execute("""
+            INSERT INTO MaintenanceRequest (subject, equipment_id, team_id, technician_id, created_by_user_id, request_type, stage, scheduled_date, duration_hours)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (data['subject'], data['equipment_id'], data.get('team_id'), data.get('technician_id'), g.user['id'],
+                  data['request_type'], data.get('stage', 'New'), data.get('scheduled_date'), data.get('duration_hours')))
+            new_id = cursor.lastrowid
+            
+            log_action(g.user['id'], 'CREATE_REQUEST', 'MaintenanceRequest', new_id, f"Created request: {data['subject']}")
+            return jsonify({'id': new_id, 'message': 'Request created'}), 201
+        except Exception as e:
+            return jsonify({'error': f"Database Error: {str(e)}"}), 500
+        finally:
+            cursor.close()
 
 @app.route('/api/requests/<int:req_id>', methods=['PUT', 'DELETE'])
 @login_required
