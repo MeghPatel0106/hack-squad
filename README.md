@@ -126,6 +126,42 @@ Executes assigned maintenance tasks and updates repair progress.
 
 ---
 
+---
+
+## Database Access (For Jury / Evaluation)
+
+MechCare uses **MySQL** as the backend database.
+
+For security reasons, database credentials and direct database access are **not shared** in this repository.  
+Each evaluator is expected to configure the database **locally** on their own system.
+
+### Database Setup Steps
+
+1. Install and start **MySQL Server** on your system.
+
+2. Create the database:
+3. Import the database schema (if `schema.sql` is provided):
+   mysql -u root -p mechcare_db < schema.sql
+
+4. Update database connection details in the project configuration file
+(such as `db.py` or `database.py`):
+host = "localhost"
+user = "root"
+password = "Pme@010607"
+database = "mechcare_db"
+
+
+5. Run the application as described in the execution instructions.
+
+### Evaluation Notes
+
+- The system is designed to run with a **local MySQL database**
+- No shared or remote database is required
+- This approach ensures data security and independent evaluation
+
+---
+
+
 ## Conclusion
 
 MechCare transforms maintenance operations into a structured, transparent, and efficient digital process.  
