@@ -1,0 +1,3 @@
+-- Empty seeds for clean slate
+-- Admin user will be created by seed_users.py
+-- No initial teams, equipment, or requests.

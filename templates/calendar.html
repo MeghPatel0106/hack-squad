@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"
+    style="display: flex; justify-content: space-between;">
+    <h1 id="month-year-header">Calendar</h1>
+    <div>
+        <button class="btn-sm btn-outline" onclick="changeMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+        <button class="btn-sm btn-outline" onclick="changeMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
+    </div>
+</div>
+
+<div class="glass-card p-4" style="padding: 1rem;">
+    <div class="calendar-grid"
+        style="grid-template-columns: repeat(7, 1fr); display: grid; text-align: center; margin-bottom: 0.5rem;">
+        <div class="calendar-day-header">Sun</div>
+        <div class="calendar-day-header">Mon</div>
+        <div class="calendar-day-header">Tue</div>
+        <div class="calendar-day-header">Wed</div>
+        <div class="calendar-day-header">Thu</div>
+        <div class="calendar-day-header">Fri</div>
+        <div class="calendar-day-header">Sat</div>
+    </div>
+    <div class="calendar-grid" id="calendar-body">
+        <!-- JS Generated -->
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        initCalendar();
+    });
+</script>
+{% endblock %}

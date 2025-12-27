@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <a href="{{ url_for('equipment') }}" class="btn-outline" style="padding: 0.5rem;"><i
+                class="fa-solid fa-arrow-left"></i></a>
+        <h1>{{ item.name }}</h1>
+        <div class="card-tag" style="font-size: 1rem; padding: 0.3rem 0.8rem;">{{ item.serial_number }}</div>
+    </div>
+
+    <div style="display: flex; gap: 1rem;">
+        <a href="{{ url_for('create_request_page', equipment_id=item.id) }}" class="btn-primary-glow">
+            <i class="fa-solid fa-plus"></i> New Request
+        </a>
+        <a href="{{ url_for('kanban', equipment_id=item.id) }}" class="smart-badge"
+            style="font-size: 1rem; padding: 0.75rem 1.5rem;">
+            <i class="fa-solid fa-wrench"></i> Maintenance
+            {% if item.open_requests > 0 %}
+            <span class="badge-count" style="width: 24px; height: 24px; font-size: 0.8rem; top: -8px; right: -8px;">{{
+                item.open_requests }}</span>
+            {% endif %}
+        </a>
+    </div>
+</div>
+
+<div class="glass-card mb-4" style="padding: 2rem;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem;">
+        <!-- Left Column -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div>
+                <label>Equipment Name</label>
+                <div style="font-size: 1.1rem; font-weight: 500;">{{ item.name }}</div>
+            </div>
+            <div>
+                <label>Category</label>
+                <div style="font-size: 1.1rem;">{{ item.category_name or 'Uncategorized' }}</div>
+            </div>
+            <div>
+                <label>Department</label>
+                <div style="font-size: 1.1rem;">{{ item.department }}</div>
+            </div>
+            <div>
+                <label>Assigned To</label>
+                <div style="font-size: 1.1rem;">{{ item.assigned_employee }}</div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div>
+                <label>Maintenance Team</label>
+                <div style="font-size: 1.1rem;">{{ item.team_name or 'None' }}</div>
+            </div>
+            <div>
+                <label>Technician</label>
+                <div style="font-size: 1.1rem;">{{ item.technician_name or 'None' }}</div>
+            </div>
+            <div>
+                <label>Work Center</label>
+                <div style="font-size: 1.1rem;">{{ item.work_center_name or 'None' }}</div>
+            </div>
+            <div>
+                <label>Purchase Date</label>
+                <div style="font-size: 1.1rem;">{{ item.purchase_date }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Description Section -->
+    <div style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--glass-border);">
+        <label>Description (Internal Note)</label>
+        <p style="color: var(--text-muted); line-height: 1.6;">
+            {{ item.description or 'No additional notes provided for this equipment.' }}
+        </p>
+    </div>
+
+    <!-- Warranty Section -->
+    <div style="margin-top: 2rem;">
+        <label>Warranty Information</label>
+        <p style="color: var(--accent); font-weight: 500;">
+            <i class="fa-solid fa-shield-halved"></i> {{ item.warranty_info }}
+        </p>
+    </div>
+</div>
+{% endblock %}

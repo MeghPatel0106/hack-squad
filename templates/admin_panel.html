@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fa-solid fa-shield-halved" style="color: var(--primary);"></i> Admin Panel</h1>
+    <span class="card-tag">Administrator Access</span>
+</div>
+
+<div class="dashboard-grid" style="grid-template-columns: 1fr;">
+    <!-- System Logs -->
+    <div class="glass-card p-4">
+        <h3 class="mb-4">System Audit Logs</h3>
+        <div class="table-container" style="max-height: 500px; overflow-y: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Action</th>
+                        <th>Target</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody id="audit-log-list">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const res = await fetch('/api/logs');
+        if (res.ok) {
+            const logs = await res.json();
+            const list = document.getElementById('audit-log-list');
+            list.innerHTML = logs.map(l => `
+            <tr>
+                <td style="font-size: 0.9rem; color: var(--text-muted);">${new Date(l.timestamp).toLocaleString()}</td>
+                <td><div style="font-weight: 500;">${l.user_name || 'System'}</div></td>
+                <td><span class="card-tag" style="background: rgba(255,255,255,0.05);">${l.user_role || '-'}</span></td>
+                <td><span class="card-tag" style="background: ${getActionColor(l.action)}">${l.action}</span></td>
+                <td>${l.target_type} #${l.target_id || ''}</td>
+                <td style="color: var(--text-muted); font-size: 0.9rem;">${l.details}</td>
+            </tr>
+        `).join('');
+        }
+    });
+
+    function getActionColor(action) {
+        if (action.includes('DELETE')) return 'rgba(239, 68, 68, 0.2)'; // Red
+        if (action.includes('CREATE')) return 'rgba(16, 185, 129, 0.2)'; // Green
+        if (action.includes('UPDATE')) return 'rgba(59, 130, 246, 0.2)'; // Blue
+        return 'rgba(255, 255, 255, 0.1)';
+    }
+</script>
+{% endblock %}

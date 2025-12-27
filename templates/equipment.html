@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1>Equipment Assets</h1>
+        <p style="color: var(--text-muted);">Manage all machinery and tools</p>
+    </div>
+    {% if user.role == 'Admin' %}
+    <button class="btn-primary-glow" onclick="showCreateEqModal()"><i class="fa-solid fa-plus"></i> Add
+        Equipment</button>
+    {% endif %}
+</div>
+
+<!-- Search Bar -->
+<div class="glass-card p-3 mb-4 d-flex align-items-center gap-2">
+    <i class="fa-solid fa-search" style="color: var(--text-muted);"></i>
+    <input type="text" id="searchInput" placeholder="Search equipment by name or serial number..."
+        style="background: transparent; border: none; color: var(--text-main); flex: 1; outline: none; font-size: 1rem;"
+        onkeyup="loadEquipment(this.value)">
+</div>
+
+<div class="glass-card" style="overflow: hidden;">
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="border-bottom: 1px solid var(--glass-border); text-align: left;">
+                <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">Name</th>
+                <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">Serial #</th>
+                <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">Department</th>
+                <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">Location</th>
+                <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">Team</th>
+                <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">Technician</th>
+                <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">Status</th>
+                <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">Actions</th>
+            </tr>
+        </thead>
+        <tbody id="equipment-list">
+            <!-- Populated by JS -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Create Equipment Modal -->
+<div id="createEqModal" class="modal"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; overflow-y:auto;">
+    <div class="glass-card p-4" style="width: 600px; max-height: 90vh; overflow-y: auto; margin-top: 2rem;">
+        <h3>Add Equipment</h3>
+        <form onsubmit="createEquipment(event)">
+            <div class="form-group mb-3">
+                <label>Name</label>
+                <input type="text" name="name" required placeholder="e.g. CNC Lathe">
+            </div>
+            <div class="form-group mb-3">
+                <label>Serial Number</label>
+                <input type="text" name="serial_number" required placeholder="e.g. SN-2023-001">
+            </div>
+
+            <div class="form-group mb-3">
+                <label>Equipment Type</label>
+                <select name="equipment_type"
+                    style="width: 100%; padding: 0.8rem; border-radius: 0.5rem; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white;">
+                    <option value="Machine">Machine</option>
+                    <option value="Vehicle">Vehicle</option>
+                    <option value="Computer">Computer</option>
+                </select>
+            </div>
+
+            <div class="row" style="display:flex; gap:1rem;">
+                <div class="form-group mb-3" style="flex:1;">
+                    <label>Department</label>
+                    <input type="text" name="department" placeholder="Production">
+                </div>
+                <div class="form-group mb-3" style="flex:1;">
+                    <label>Location</label>
+                    <input type="text" name="location" placeholder="Floor 1, Zone B">
+                </div>
+            </div>
+
+            <div class="form-group mb-3">
+                <label>Description</label>
+                <textarea name="description" rows="3" placeholder="Equipment details..."></textarea>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn-icon-danger" onclick="closeEqModal()">Cancel</button>
+                <button type="submit" class="btn-primary-glow">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Since we are overriding the base template, we need to include the script
+    document.addEventListener('DOMContentLoaded', () => loadEquipment());
+
+    async function loadEquipment(query = '') {
+        let url = '/api/equipment';
+        if (query) url += `?search=${encodeURIComponent(query)}`;
+
+        const res = await fetch(url);
+        const data = await res.json();
+
+        const list = document.getElementById('equipment-list');
+        list.innerHTML = data.map(item => `
+            <tr style="${item.is_scrapped ? 'opacity: 0.5; text-decoration: line-through;' : ''}">
+                <td style="padding: 1rem;"><a href="/equipment/${item.id}" style="color: var(--text-main); font-weight: 500; text-decoration: none;">${item.name}</a></td>
+                <td style="padding: 1rem;">${item.serial_number}</td>
+                <td style="padding: 1rem;">${item.department || '-'}</td>
+                <td style="padding: 1rem;">${item.location || '-'}</td>
+                <td style="padding: 1rem;">${item.team_name || '-'}</td>
+                <td style="padding: 1rem;">${item.technician_name || '-'}</td>
+                <td style="padding: 1rem;">${item.is_scrapped ? '<span style="color:var(--danger)">Scrapped</span>' : 'Active'}</td>
+                <td style="padding: 1rem;">
+                    <a href="/equipment/${item.id}" class="smart-badge"><i class="fa-solid fa-eye"></i></a>
+                    {% if user.role == 'Admin' %}
+                    <button onclick="deleteEquipment(${item.id})" class="smart-badge" style="color:var(--danger); border-color:var(--danger); background:transparent; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                    {% endif %}
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function showCreateEqModal() {
+        document.getElementById('createEqModal').style.display = 'flex';
+    }
+
+    function closeEqModal() {
+        document.getElementById('createEqModal').style.display = 'none';
+    }
+
+    async function createEquipment(e) {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(e.target));
+        const res = await fetch('/api/equipment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            closeEqModal();
+            loadEquipment();
+        } else {
+            alert('Error creating equipment');
+        }
+    }
+
+    async function deleteEquipment(id) {
+        if (!confirm("Permanently delete this equipment and all its history?")) return;
+        const res = await fetch(`/api/equipment/${id}`, { method: 'DELETE' });
+        if (res.ok) loadEquipment();
+    }
+</script>
+{% endblock %}

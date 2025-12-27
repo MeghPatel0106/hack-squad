@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"
+    style="display:flex; justify-content:space-between;">
+    <h1>Equipment Categories</h1>
+    <button class="btn-primary-glow" onclick="alert('Create feature coming soon!')"><i class="fa-solid fa-plus"></i> New
+        Category</button>
+</div>
+
+<div class="glass-card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Category Name</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody id="cat-list">
+                <!-- Populated by JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const res = await fetch('/api/categories');
+        const data = await res.json();
+        const list = document.getElementById('cat-list');
+
+        list.innerHTML = data.map(c => `
+        <tr>
+            <td style="font-weight: 500; color: var(--primary);">${c.name}</td>
+            <td>${c.description || '-'}</td>
+        </tr>
+    `).join('');
+    });
+</script>
+{% endblock %}

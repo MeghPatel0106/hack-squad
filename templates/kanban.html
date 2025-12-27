@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"
+    style="display: flex; justify-content: space-between;">
+    <h1>Maintenance Board</h1>
+    <div>
+        <span class="status-dot" style="background: var(--danger);"></span> Overdue
+    </div>
+</div>
+
+<div class="kanban-board">
+    <div class="kanban-column" id="col-New" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <div class="column-header">
+            <span>New Requests</span>
+            <span class="count-badge">0</span>
+        </div>
+        <div class="kanban-cards" id="list-New"></div>
+    </div>
+
+    <div class="kanban-column" id="col-InProgress" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <div class="column-header">
+            <span>In Progress</span>
+            <span class="count-badge">0</span>
+        </div>
+        <div class="kanban-cards" id="list-InProgress"></div>
+    </div>
+
+    <div class="kanban-column" id="col-Repaired" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <div class="column-header">
+            <span>Repaired</span>
+            <span class="count-badge">0</span>
+        </div>
+        <div class="kanban-cards" id="list-Repaired"></div>
+    </div>
+
+    <div class="kanban-column" id="col-Scrap" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <div class="column-header">
+            <span>Scrap / End of Life</span>
+            <span class="count-badge">0</span>
+        </div>
+        <div class="kanban-cards" id="list-Scrap"></div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadKanban();
+    });
+</script>
+{% endblock %}

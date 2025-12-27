@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MechCare | Maintenance Management</title>
+    <!-- Google Fonts: Outfit for modern, geometric look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Toggle -->
+        <button id="sidebar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+
+        <nav class="sidebar" id="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-gears pulse"></i>
+                <span>MechCare</span>
+            </div>
+
+            {% if user %}
+            <div class="user-profile mb-4">
+                <div class="avatar-circle">{{ user.name[0] }}</div>
+                <div class="user-info">
+                    <div class="user-name">{{ user.name }}</div>
+                    <div class="user-role">{{ user.role }}</div>
+                </div>
+            </div>
+            {% endif %}
+
+            <ul class="nav-links">
+                <li><a href="{{ url_for('dashboard') }}"
+                        class="{{ 'active' if request.path == '/dashboard' else '' }}"><i
+                            class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+                <!-- Feature: Equipment -->
+                {% if user.role == 'Company User' %}
+                <li><a href="{{ url_for('equipment') }}"
+                        class="{{ 'active' if request.path == '/equipment' else '' }}"><i
+                            class="fa-solid fa-screwdriver-wrench"></i> Equipment</a></li>
+                {% endif %}
+                <!-- Feature: Kanban -->
+                <li><a href="{{ url_for('kanban') }}" class="{{ 'active' if request.path == '/kanban' else '' }}"><i
+                            class="fa-solid fa-clipboard-list"></i> Kanban Board</a></li>
+                <!-- Feature: Calendar -->
+                <li><a href="{{ url_for('calendar') }}" class="{{ 'active' if request.path == '/calendar' else '' }}"><i
+                            class="fa-solid fa-calendar-days"></i> Preventive Calendar</a></li>
+
+                {% if user.role == 'Admin' %}
+                <li
+                    style="margin-top: 1rem; border-top: 1px solid var(--glass-border); padding-top: 1rem; font-size: 0.8rem; color: var(--text-muted); padding-left: 1rem;">
+                    MANAGEMENT</li>
+
+                <!-- Feature: Work Centers -->
+                <li><a href="{{ url_for('work_centers') }}"
+                        class="{{ 'active' if request.path == '/work_centers' else '' }}"><i
+                            class="fa-solid fa-industry"></i> Work Centers</a></li>
+                <!-- Feature: Categories -->
+                <li><a href="{{ url_for('categories') }}"
+                        class="{{ 'active' if request.path == '/categories' else '' }}"><i class="fa-solid fa-tags"></i>
+                        Categories</a></li>
+                <!-- Feature: Teams -->
+                <li><a href="{{ url_for('teams') }}" class="{{ 'active' if request.path == '/teams' else '' }}"><i
+                            class="fa-solid fa-users-gear"></i> Teams</a></li>
+                <!-- Feature: Technicians -->
+                <li><a href="{{ url_for('technicians') }}"
+                        class="{{ 'active' if request.path == '/technicians' else '' }}"><i
+                            class="fa-solid fa-user-gear"></i> Technicians</a></li>
+                {% endif %}
+
+                {% if user.role == 'Admin' %}
+                <li
+                    style="margin-top: 1rem; border-top: 1px solid var(--glass-border); padding-top: 1rem; font-size: 0.8rem; color: var(--text-muted); padding-left: 1rem;">
+                    ADMINISTRATION</li>
+                <li><a href="{{ url_for('admin_panel') }}" class="{{ 'active' if request.path == '/admin' else '' }}"><i
+                            class="fa-solid fa-user-shield"></i> Admin Panel</a></li>
+                {% endif %}
+            </ul>
+            <div class="nav-footer">
+                {% if user.role == 'Company User' %}
+                <a href="#"
+                    onclick="event.preventDefault(); window.location.href='/create_request?date=' + new Date().toISOString().split('T')[0];"
+                    class="btn-primary-glow mb-2" title="Create Request for Today">
+                    <i class="fa-solid fa-plus"></i> New Request
+                </a>
+                {% endif %}
+                {% if user.role != 'Admin' %}
+                <a href="{{ url_for('logout') }}" class="btn-outline"
+                    style="text-align: center; display: block; border: 1px solid var(--glass-border); padding: 0.5rem; border-radius: 0.5rem; text-decoration: none; color: var(--text-muted);"><i
+                        class="fa-solid fa-sign-out-alt"></i> Logout</a>
+                {% endif %}
+            </div>
+        </nav>
+        <main class="content-area">
+            <!-- Flash Messages Here -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                <div class="flash-msg {{ category }}">
+                    {{ message }}
+                    <span onclick="this.parentElement.remove()" style="float: right; cursor: pointer;">&times;</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('active');
+        }
+    </script>
+</body>
+
+</html>

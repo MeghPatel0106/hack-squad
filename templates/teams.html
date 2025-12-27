@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fa-solid fa-users-gear" style="color: var(--primary);"></i> Maintenance Teams</h1>
+    {% if user.role == 'Admin' %}
+    <button class="btn-primary-glow" onclick="showCreateTeamMeta()"><i class="fa-solid fa-plus"></i> Create
+        Team</button>
+    {% endif %}
+</div>
+
+<!-- Simple inline form for creating team -->
+<div id="createTeamForm" class="glass-card p-3 mb-4" style="display: none;">
+    <h4>New Team</h4>
+    <form onsubmit="createTeam(event)" class="d-flex gap-2">
+        <input type="text" name="name" placeholder="Team Name (e.g., Electrical A)" required style="flex:1;">
+        <button type="submit" class="btn-primary-glow">Save</button>
+        <button type="button" class="btn-icon-danger"
+            onclick="document.getElementById('createTeamForm').style.display='none'">Cancel</button>
+    </form>
+</div>
+
+<div class="dashboard-grid" id="teams-container">
+    <!-- Populated by JS -->
+</div>
+
+<!-- Modal for adding technician -->
+<div id="addTechModal" class="modal"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div class="glass-card p-4" style="width: 400px;">
+        <h3>Add Technician</h3>
+        <form onsubmit="createTechnician(event)">
+            <input type="hidden" id="modalTeamId" name="team_id">
+            <div class="form-group mb-3">
+                <label>Name</label>
+                <input type="text" name="name" required placeholder="Technician Name">
+            </div>
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn-icon-danger" onclick="closeTechModal()">Cancel</button>
+                <button type="submit" class="btn-primary-glow">Add</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', loadTeams);
+
+    function showCreateTeamMeta() {
+        document.getElementById('createTeamForm').style.display = 'block';
+    }
+
+    function showAddTechModal(teamId) {
+        document.getElementById('modalTeamId').value = teamId;
+        document.getElementById('addTechModal').style.display = 'flex';
+    }
+
+    function closeTechModal() {
+        document.getElementById('addTechModal').style.display = 'none';
+    }
+
+    async function loadTeams() {
+        const tRes = await fetch('/api/teams');
+        const teams = await tRes.json();
+
+        // Fetch techs to group them
+        const techRes = await fetch('/api/technicians');
+        const techs = await techRes.json();
+
+        const container = document.getElementById('teams-container');
+        container.innerHTML = teams.map(team => {
+            const teamTechs = techs.filter(t => t.team_id === team.id);
+            return `
+            <div class="glass-card p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="m-0">${team.team_name}</h3>
+                    {% if user.role == 'Admin' %}
+                    <button onclick="deleteTeam(${team.id})" class="btn-icon-danger" title="Delete Team"><i class="fa-solid fa-trash"></i></button>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    <span class="card-tag">${teamTechs.length} Technicians</span>
+                </div>
+                
+                <div class="tech-list mb-3">
+                    ${teamTechs.map(t => `
+                        <div class="d-flex justify-content-between align-items-center mb-2 p-2" style="background: rgba(255,255,255,0.05); border-radius: 0.5rem;">
+                            <span><i class="fa-solid fa-user-gear"></i> ${t.name}</span>
+                            {% if user.role == 'Admin' %}
+                            <button onclick="deleteTech(${t.id})" style="background:none; border:none; color:var(--danger); cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                            {% endif %}
+                        </div>
+                    `).join('')}
+                    ${teamTechs.length === 0 ? '<div style="color:var(--text-muted); font-size:0.9rem;">No members assigned</div>' : ''}
+                </div>
+
+                {% if user.role == 'Admin' %}
+                <button onclick="showAddTechModal(${team.id})" class="btn-primary-glow" style="width:100%; font-size:0.9rem;"><i class="fa-solid fa-plus"></i> Add Member</button>
+                {% endif %}
+            </div>
+        `;
+        }).join('');
+    }
+
+    async function createTeam(e) {
+        e.preventDefault();
+        const name = e.target.name.value;
+        const res = await fetch('/api/teams', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (res.ok) {
+            e.target.reset();
+            document.getElementById('createTeamForm').style.display = 'none';
+            loadTeams();
+        }
+    }
+
+    async function deleteTeam(id) {
+        if (!confirm("Delete this team?")) return;
+        await fetch(`/api/teams/${id}`, { method: 'DELETE' });
+        loadTeams();
+    }
+
+    async function createTechnician(e) {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(e.target));
+        const res = await fetch('/api/technicians', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            closeTechModal();
+            loadTeams();
+        }
+    }
+
+    async function deleteTech(id) {
+        if (!confirm("Remove this technician?")) return;
+        await fetch(`/api/technicians/${id}`, { method: 'DELETE' });
+        loadTeams();
+    }
+</script>
+{% endblock %}

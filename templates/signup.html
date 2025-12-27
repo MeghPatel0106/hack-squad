@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Sign Up | MechCare</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .auth-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(12px);
+            padding: 2rem;
+            border-radius: 1rem;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid var(--glass-border);
+            text-align: center;
+        }
+
+        .auth-brand {
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 2rem;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="auth-card">
+        <div class="auth-brand"><i class="fa-solid fa-gears"></i> MechCare</div>
+
+        <form method="POST">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}"
+                style="margin-bottom: 1rem; padding: 0.5rem; border-radius: 0.5rem; background: rgba(255,255,255,0.1); font-size: 0.9rem; text-align: left;">
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <div class="form-group">
+                <input type="text" name="name" placeholder="Full Name" required>
+            </div>
+            <div class="form-group">
+                <input type="email" name="email" placeholder="Email Address" required>
+            </div>
+            <div class="form-group">
+                <input type="password" name="password" placeholder="Password" required>
+            </div>
+            <div class="form-group">
+                <input type="password" name="confirm_password" placeholder="Confirm Password" required>
+            </div>
+            <div class="form-group">
+                <select name="role" required
+                    style="width: 100%; padding: 0.8rem; border-radius: 0.5rem; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white;">
+                    <option value="" disabled selected>Select Account Type</option>
+                    <option value="Company User" style="color: black;">Company User</option>
+                    <!-- Technician signup allowed? Req says: "During Signup, user must choose their role: Company User | Technician" -->
+                    <option value="Technician" style="color: black;">Technician</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary-glow" style="width: 100%;">Create Account</button>
+        </form>
+
+        <p style="margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted);">
+            Already have an account? <a href="{{ url_for('login') }}" style="color: var(--primary);">Login</a>
+        </p>
+    </div>
+</body>
+
+</html>

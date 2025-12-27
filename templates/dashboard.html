@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"
+    style="display:flex; justify-content:space-between;">
+    <div>
+        <h1>Dashboard</h1>
+        <div style="color: var(--text-muted);">Welcome back, <span style="color: var(--primary); font-weight: 600;">{{
+                user.name }}</span></div>
+    </div>
+
+    <!-- Search Bar -->
+    <div style="position: relative;">
+        <input type="text" placeholder="Search..."
+            style="padding-left: 2.5rem; background: rgba(0,0,0,0.2); width: 250px;">
+        <i class="fa-solid fa-magnifying-glass"
+            style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="dashboard-grid"
+    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- Critical Equipment -->
+    <div class="glass-card p-4" style="padding: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+        <div style="background: rgba(239, 68, 68, 0.2); padding: 1rem; border-radius: 0.75rem; color: var(--danger);">
+            <i class="fa-solid fa-triangle-exclamation fa-xl"></i>
+        </div>
+        <div>
+            <div style="color: var(--text-muted); font-size: 0.85rem;">Critical Equipment</div>
+            <div class="h2" style="font-size: 1.8rem; font-weight: 700;" id="stat-critical">0</div>
+        </div>
+    </div>
+
+    <!-- Technician Load -->
+    <div class="glass-card p-4" style="padding: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+        <div style="background: rgba(59, 130, 246, 0.2); padding: 1rem; border-radius: 0.75rem; color: var(--primary);">
+            <i class="fa-solid fa-user-gear fa-xl"></i>
+        </div>
+        <div>
+            <div style="color: var(--text-muted); font-size: 0.85rem;">Technician Load</div>
+            <div class="h2" style="font-size: 1.8rem; font-weight: 700;" id="stat-load">0</div>
+        </div>
+    </div>
+
+    <!-- Active Requests -->
+    <div class="glass-card p-4" style="padding: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+        <div style="background: rgba(245, 158, 11, 0.2); padding: 1rem; border-radius: 0.75rem; color: var(--warning);">
+            <i class="fa-solid fa-list-check fa-xl"></i>
+        </div>
+        <div>
+            <div style="color: var(--text-muted); font-size: 0.85rem;">Open Requests</div>
+            <div class="h2" style="font-size: 1.8rem; font-weight: 700;" id="stat-active">0</div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Requests Table (Mockup Request List) -->
+<div class="glass-card" style="padding: 1.5rem;">
+    <h3 style="margin-bottom: 1.5rem;">Recent Maintenance Requests</h3>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Equipment</th>
+                    <th>Technician</th>
+                    <th>Team</th>
+                    <th>Stage</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody id="dash-req-list">
+                <!-- JS Fill -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Fetch stats
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+
+        document.getElementById('stat-critical').innerText = data.critical_equipment;
+        document.getElementById('stat-load').innerText = data.technician_load;
+        document.getElementById('stat-active').innerText = data.active_requests;
+
+        // Fetch Recent Requests
+        const reqRes = await fetch('/api/requests');
+        const reqData = await reqRes.json();
+
+        const list = document.getElementById('dash-req-list');
+        list.innerHTML = reqData.slice(0, 5).map(r => `
+        <tr>
+            <td style="font-weight: 500;">${r.subject}</td>
+            <td>${r.equipment_name}</td>
+            <td>
+                 ${r.technician_name ? `<div style="display:flex;align-items:center;gap:0.5rem"><img src="${r.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + r.technician_name}" style="width:24px;height:24px;border-radius:50%"> ${r.technician_name}</div>` : '<span style="color:var(--text-muted)">Unassigned</span>'}
+            </td>
+            <td>${r.team_name || '-'}</td>
+            <td><span class="card-tag">${r.stage}</span></td>
+            <td>${r.created_at || new Date().toISOString().split('T')[0]}</td>
+        </tr>
+    `).join('');
+    });
+</script>
+{% endblock %}

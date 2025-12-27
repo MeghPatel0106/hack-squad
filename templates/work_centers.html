@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"
+    style="display:flex; justify-content:space-between;">
+    <h1>Work Centers</h1>
+    <button class="btn-primary-glow" onclick="alert('Create feature coming soon!')"><i class="fa-solid fa-plus"></i> New
+        Work Center</button>
+</div>
+
+<div class="glass-card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Work Center</th>
+                    <th>Code</th>
+                    <th>Tag</th>
+                    <th>Cost/Hr</th>
+                    <th>Capacity</th>
+                    <th>Efficiency</th>
+                    <th>OEE Target</th>
+                </tr>
+            </thead>
+            <tbody id="wc-list">
+                <!-- Populated by JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const res = await fetch('/api/work_centers');
+        const data = await res.json();
+        const list = document.getElementById('wc-list');
+
+        list.innerHTML = data.map(wc => `
+        <tr>
+            <td style="font-weight: 500;">${wc.name}</td>
+            <td>${wc.code}</td>
+            <td><span class="card-tag">${wc.tag || '-'}</span></td>
+            <td>$${wc.cost_per_hour}</td>
+            <td>${wc.capacity} hrs</td>
+            <td>${wc.efficiency}%</td>
+            <td>${wc.oee_target}%</td>
+        </tr>
+    `).join('');
+    });
+</script>
+{% endblock %}

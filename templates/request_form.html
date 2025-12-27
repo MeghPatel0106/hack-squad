@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="glass-card" style="max-width: 800px; margin: 0 auto; padding: 2rem;">
+    <h1>Create Maintenance Request</h1>
+    <form id="requestForm" onsubmit="submitRequest(event)">
+        <div class="form-group">
+            <label>Subject</label>
+            <input type="text" name="subject" required placeholder="e.g. Broken Belt">
+        </div>
+
+        <div class="form-group">
+            <label>Equipment</label>
+            <select name="equipment_id" id="equipmentSelect" onchange="autoFillTeam()" required>
+                <option value="">Select Equipment</option>
+                <option value="">Computer</option>
+                <option value="">Machine</option>
+                <option value="">Vehicles</option>
+                <!-- Populated by JS -->
+            </select>
+        </div>
+
+        <!-- Team is auto-assigned by backend -->
+
+        <div class="form-group">
+            <label>Request Type</label>
+            <select name="request_type" required>
+                <option value="Corrective">Corrective</option>
+                <option value="Preventive">Preventive</option>
+            </select>
+        </div>
+
+        <div class="d-flex gap-4" style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label>Scheduled Date</label>
+                <input type="date" name="scheduled_date" value="{{ date if date else '' }}" readonly
+                    style="background: rgba(0,0,0,0.2); cursor: not-allowed;">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Description</label>
+            <textarea name="description" rows="3" placeholder="Additional details..."
+                style="width: 100%; padding: 0.8rem; border-radius: 0.5rem; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white;"></textarea>
+        </div>
+
+        <button type="submit" class="btn-primary-glow">Submit Request</button>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadFormDependencies();
+    });
+</script>
+{% endblock %}
