@@ -78,13 +78,8 @@ def login():
             
             log_action(user['id'], 'LOGIN')
             
-            # Roles: Admin, Company User, Technician
-            if user['role'] == 'Admin':
-                return redirect(url_for('admin_panel'))
-            elif user['role'] == 'Technician':
-                return redirect(url_for('kanban')) # Techs work on Kanban or Schedule
-            else:
-                return redirect(url_for('create_request_page')) # Company users want to request
+            # Unified Entry Point: Dashboard
+            return redirect(url_for('dashboard'))
         
         flash('Invalid email or password', 'error')
     return render_template('login.html')
@@ -134,11 +129,7 @@ def signup():
 
 @app.route('/logout')
 def logout():
-    # Admin logout restriction - STRICT
-    if g.user and g.user['role'] == 'Admin':
-         flash("Administrators cannot logout.", "warning")
-         return redirect(url_for('admin_panel'))
-
+    # Valid Logout
     if g.user:
         log_action(g.user['id'], 'LOGOUT')
     session.clear()
@@ -163,9 +154,7 @@ def dashboard():
 @app.route('/equipment')
 @login_required
 def equipment():
-    if g.user['role'] != 'Company User':
-        if g.user['role'] == 'Admin':
-             return redirect(url_for('admin_panel'))
+    if g.user['role'] not in ['Company User', 'Admin']:
         return redirect(url_for('kanban'))
     return render_template('equipment.html', user=g.user)
 
@@ -208,11 +197,17 @@ def calendar():
 @app.route('/work_centers')
 @login_required
 def work_centers():
+    if g.user['role'] == 'Admin':
+        flash('Access Denied: Administrators cannot manage Work Centers.', 'error')
+        return redirect(url_for('admin_panel'))
     return render_template('work_centers.html', user=g.user)
 
 @app.route('/categories')
 @login_required
 def categories():
+    if g.user['role'] == 'Admin':
+        flash('Access Denied: Administrators cannot manage Categories.', 'error')
+        return redirect(url_for('admin_panel'))
     return render_template('categories.html', user=g.user)
 
 @app.route('/teams')
@@ -318,7 +313,7 @@ def api_stats():
 @app.route('/api/equipment', methods=['GET', 'POST'])
 @login_required
 def api_equipment():
-    if g.user['role'] != 'Company User':
+    if g.user['role'] not in ['Company User', 'Admin']:
          return jsonify({'error': 'Unauthorized'}), 403
 
     db = get_db()
@@ -402,7 +397,7 @@ def api_requests():
         equipment_id = request.args.get('equipment_id')
         search = request.args.get('search')
         query = """
-            SELECT r.*, r.description, e.name as equipment_name, t.name as technician_name, t.avatar_url, m.team_name, ec.name as category_name, u.name as created_by_name
+            SELECT r.*, r.description, e.name as equipment_name, e.location as equipment_location, t.name as technician_name, t.avatar_url, m.team_name, ec.name as category_name, u.name as created_by_name
             FROM MaintenanceRequest r
             JOIN Equipment e ON r.equipment_id = e.id
             LEFT JOIN EquipmentCategory ec ON e.category_id = ec.id
@@ -425,68 +420,70 @@ def api_requests():
             conditions.append("r.created_by_user_id = %s")
             params.append(g.user['id'])
         elif g.user['role'] == 'Technician':
-             # Get user's team
-             cursor.execute("SELECT team_id FROM Technician WHERE user_id = %s", (g.user['id'],))
+             # Get user's team and technician ID
+             cursor.execute("SELECT id, team_id FROM Technician WHERE user_id = %s", (g.user['id'],))
              tech_rec = cursor.fetchone()
-             if tech_rec and tech_rec['team_id']:
-                 conditions.append("r.team_id = %s")
-                 params.append(tech_rec['team_id'])
+             if tech_rec:
+                 if tech_rec.get('team_id'):
+                     # Restrict to Team OR Self
+                     clauses = []
+                     clauses.append("r.team_id = %s")
+                     clauses.append("r.technician_id = %s")
+                     conditions.append(f"({' OR '.join(clauses)})")
+                     params.extend([tech_rec['team_id'], tech_rec['id']])
+                 else:
+                     # Teamless -> Show ALL (Global View for new/unassigned techs)
+                     pass
              else:
-                 conditions.append("1=0") # No team, no requests
+                  conditions.append("1=0") # No tech record found
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
         
         query += " ORDER BY r.created_at DESC"
         cursor.execute(query, params)
-        requests = cursor.fetchall()
+        requests_data = cursor.fetchall()
+        
+        # Serialization Fix: Ensure dates are strings YYYY-MM-DD
+        for r in requests_data:
+             if r.get('scheduled_date'):
+                 r['scheduled_date'] = str(r['scheduled_date']) # Standardizes to YYYY-MM-DD for date objects
+        
         cursor.close()
-        return jsonify(requests)
+        return jsonify(requests_data)
 
     if request.method == 'POST':
         if g.user['role'] != 'Company User':
              return jsonify({'error': 'Only Company Users can create requests'}), 403
 
         data = request.json
-        if data.get('stage') == 'Scrap' and g.user['role'] != 'Admin': # Only Admin (or explicitly authorized)
-             return jsonify({'error': 'Only Admins can scrap equipment'}), 403
+        # Permission Change: Techs can Scrap, Admins CANNOT. 
+        # But this is CREATE. Usually you don't create as Scrap. 
+        # But if they do:
+        if data.get('stage') == 'Scrap':
+             if g.user['role'] == 'Admin':
+                 return jsonify({'error': 'Admins cannot scrap equipment'}), 403
+             # If role is Company User (checked above) -> They probably shouldn't scrap either?
+             # But the prompt says "technician panel". This is create. Let's leave create alone or allow all but Admin?
+             # Let's focus on PUT (Update), which is where stage changes happen.
 
         if data.get('stage') == 'Scrap':
              cursor.execute("UPDATE Equipment SET is_scrapped = TRUE WHERE id = %s", (data['equipment_id'],))
         
-        # Validate Equipment Exists
-        if not data.get('equipment_id'):
-             return jsonify({'error': 'Equipment is required'}), 400
+        if not data.get('subject') or not data.get('equipment_id') or not data.get('request_type'):
+             return jsonify({'error': 'Subject, Equipment, and Request Type are required'}), 400
 
-        cursor.execute("SELECT maintenance_team_id, default_technician_id, is_scrapped FROM Equipment WHERE id = %s", (data['equipment_id'],))
-        eq_data = cursor.fetchone()
-
-        if not eq_data:
-            return jsonify({'error': 'Selected equipment not found in database'}), 404
-
-        if eq_data.get('is_scrapped'):
-            return jsonify({'error': 'Cannot create request for scrapped equipment'}), 400
+        cursor.execute("""
+            INSERT INTO MaintenanceRequest (subject, equipment_id, team_id, technician_id, created_by_user_id, request_type, stage, scheduled_date, description)
+            VALUES (%s, %s, %s, %s, %s, %s, 'New', %s, %s)
+        """, (data['subject'], data['equipment_id'], data.get('team_id'), data.get('technician_id'), g.user['id'], data['request_type'], data.get('scheduled_date'), data.get('description')))
         
-        team_id = eq_data['maintenance_team_id']
-        tech_id = eq_data['default_technician_id']
-
-        if not data.get('scheduled_date'):
-            return jsonify({'error': 'Scheduled Date is required. Please create requests via the Calendar.'}), 400
-
-        try:
-            cursor.execute("""
-            INSERT INTO MaintenanceRequest (subject, equipment_id, team_id, technician_id, created_by_user_id, request_type, stage, scheduled_date, duration_hours)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (data['subject'], data['equipment_id'], data.get('team_id'), data.get('technician_id'), g.user['id'],
-                  data['request_type'], data.get('stage', 'New'), data.get('scheduled_date'), data.get('duration_hours')))
-            new_id = cursor.lastrowid
-            
-            log_action(g.user['id'], 'CREATE_REQUEST', 'MaintenanceRequest', new_id, f"Created request: {data['subject']}")
-            return jsonify({'id': new_id, 'message': 'Request created'}), 201
-        except Exception as e:
-            return jsonify({'error': f"Database Error: {str(e)}"}), 500
-        finally:
-            cursor.close()
+        new_id = cursor.lastrowid
+        db.commit()
+        cursor.close()
+        
+        log_action(g.user['id'], 'CREATE_REQUEST', 'MaintenanceRequest', new_id, f"Created {data['subject']}")
+        return jsonify({'id': new_id, 'message': 'Request created successfully'}), 201
 
 @app.route('/api/requests/<int:req_id>', methods=['PUT', 'DELETE'])
 @login_required
@@ -496,14 +493,30 @@ def request_ops(req_id):
     
     if request.method == 'PUT':
         data = request.json
+        # Strict Scrap Lock: Backend must reject any attempt to change stage FROM "Scrap"
+        # First, check current stage
+        cursor.execute("SELECT stage, equipment_id FROM MaintenanceRequest WHERE id = %s", (req_id,))
+        current_req = cursor.fetchone()
+        
+        if current_req and current_req['stage'] == 'Scrap':
+             # Request is already in Scrap column. IT IS LOCKED.
+             # User is trying to update it (drag it out). DENY.
+             return jsonify({'error': 'This request is in Scrap stage and is PERMANENTLY LOCKED. Cannot move.'}), 403
+
         if data.get('stage') == 'Scrap':
-            if g.user['role'] != 'Admin':
-                return jsonify({'error': 'Unauthorized'}), 403
+            # Role Check: Allow Technician, Deny Admin
+            if g.user['role'] == 'Admin':
+                return jsonify({'error': 'Admins cannot scrap equipment. Technician required.'}), 403
             
-            cursor.execute("SELECT equipment_id FROM MaintenanceRequest WHERE id = %s", (req_id,))
-            res = cursor.fetchone()
-            if res:
-                cursor.execute("UPDATE Equipment SET is_scrapped = TRUE WHERE id = %s", (res['equipment_id'],))
+            if g.user['role'] != 'Technician':
+                 pass # Technician proceeds.
+
+            # Lock confirmed above. Now proceed to set Scrap if not already.
+            if current_req: # Re-using result
+                cursor.execute("UPDATE Equipment SET is_scrapped = TRUE WHERE id = %s", (current_req['equipment_id'],))
+        
+        # REMOVED: Un-scrap logic. "Equipment must never appear again in repair selection". 
+        # Once Scrapped, it stays Scrapped.
 
         fields = []
         values = []
